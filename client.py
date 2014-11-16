@@ -7,10 +7,11 @@ TCP_PORT = 5005
 BUFFER_SIZE = 1024
 
 def get_my_ip():
-	# Hack. Need to develop function to discover own ip.
-	# so that the code can be deployed to machines
-	# and run immediately
-	return '192.168.0.101'
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	s.connect((SERVER_IP, TCP_PORT))
+	ip = s.getsockname()[0]
+	s.close()
+	return ip
 
 def join_workers(ip):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
