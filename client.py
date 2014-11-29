@@ -9,6 +9,9 @@ SERVER_PORT = 5005
 ip_port = ''
 BUFFER_SIZE = 1024
 
+def work_work(data):
+	print 'Got data: {}'.format(data[0][:20])
+
 def listen_for_tasks(port):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -20,8 +23,9 @@ def listen_for_tasks(port):
 		data = conn.recv(BUFFER_SIZE)
 		if not data: 
 			conn.close()		
-		print "\tReceived data:", data
+		# print "\tReceived data:", data
 		# TODO
+		result = work_work(data)
 		conn.close()	
 	return 0
 	
