@@ -6,7 +6,7 @@ from random import randrange
 def main():
 	x = int(sys.argv[1])
 	sum = 0
-	i = 0
+	i=0
 	while i<x:
 		i = i+1
 		sum = sum + randrange(1,10)

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
+import subprocess
 import socket
 
 # SERVER
+# By default the ip is localhost
 SERVER_IP = 'localhost'
 SERVER_PORT = 5005
 # WORKER
@@ -10,8 +12,17 @@ ip_port = ''
 BUFFER_SIZE = 1024
 
 def work_work(data):
-	print 'Got data: {}'.format(data[0][:20])
-
+	# print 'Got data: {}'.format(data)
+	arg = data.split(',')[0]
+	task = data[len(arg)+1:]
+	with open("task.py","w") as t:
+		for line in task:
+			t.write(line)
+	result = subprocess.check_output(["python","task.py",arg])
+	# print "arg = {}".format(arg)
+	print "result = {}".format(result)
+	return result
+			
 def listen_for_tasks(port):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -23,9 +34,10 @@ def listen_for_tasks(port):
 		data = conn.recv(BUFFER_SIZE)
 		if not data: 
 			conn.close()		
-		# print "\tReceived data:", data
+		print "\tReceived data:", data
 		# TODO
 		result = work_work(data)
+		conn.send(str(result))
 		conn.close()	
 	return 0
 	
