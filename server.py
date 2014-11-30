@@ -31,6 +31,8 @@ def assign_work_and_listen(worker_ip_port, arg, task):
 		return e
 	
 def handle_work(data):
+	# ex: data = "<python code to be run>,<command line parameter to be divided among workers>"
+	# ex: data = "import sys\n x = int(sys.argv[1])\n print sum(range(0,x))\n,200"
 	# x = 200
 	x = data.split(',')[len(data.split(','))-1]
 	task = data[:len(data)-len(x)-1]
@@ -44,6 +46,7 @@ def handle_work(data):
 	# (worker_ip_port, 67, task)
 	# are passed into a wrapper function
 	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, args, itertools.repeat(task)))
+	# results will look like ["text\r\n\", "text\r\n\"]
 	return "".join(results)
 		
 def handle_join(worker_ip_port):
