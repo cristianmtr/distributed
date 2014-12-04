@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import sys
 import subprocess
 import socket
 
@@ -59,6 +60,12 @@ def join_workers(ip_port):
 	return 1
 
 def main():
+	global SERVER_IP
+	#check for server IP parameter
+	#by default it is 'localhost'
+	if len(sys.argv) > 1 and sys.argv[1] != "":
+		SERVER_IP = sys.argv[1]	
+		print 'SERVER_IP = {}'.format(SERVER_IP)
 	# bind socket and get port number
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
