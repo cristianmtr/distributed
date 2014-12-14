@@ -3,6 +3,8 @@
 import sys
 import subprocess
 import socket
+import random
+import string
 
 # SERVER
 # By default the ip is localhost
@@ -11,23 +13,30 @@ SERVER_PORT = 5005
 # WORKER
 ip_port = ''
 BUFFER_SIZE = 1024
+# COUNTER FOR RECEIVED TASKS
+TASK_ID = 0
+# ID OF THE WORKER
+WORKER_ID = "".join([random.choice(string.letters) for i in xrange(0,4)])
 
 def work_work(data):
-	# print 'Got data: {}'.format(data)
+	global TASK_ID
+	global WORKER_ID
 	arg = data.split(',')[0]
+	if type(arg) == list:
+		arg = " ".join(arg)
 	task = data[len(arg)+1:]
-	with open("task.py","w") as t:
+	with open("task_{}_{}.py".format(WORKER_ID, TASK_ID),"w") as t:
 		for line in task:
 			t.write(line)
-	result = subprocess.check_output(["python","task.py",arg])
-	# print "arg = {}".format(arg)
-	print "result = {}".format(result)
+	result = subprocess.check_output(["python","task_{}_{}.py".format(WORKER_ID, TASK_ID),arg])
+	print "\t\tresult = {}".format(result)
 	return result
 			
 def listen_for_tasks(port):
+	global TASK_ID
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	print port
+	print "listening on {}".format(port)
 	s.bind(("",port))
 	while True:
 		s.listen(1)
@@ -35,8 +44,8 @@ def listen_for_tasks(port):
 		data = conn.recv(BUFFER_SIZE)
 		if not data: 
 			conn.close()		
-		print "\tReceived data:", data
-		# TODO
+		print "\tReceived data: ..."
+		TASK_ID += 1
 		result = work_work(data)
 		conn.send(str(result))
 		conn.close()	
@@ -47,12 +56,11 @@ def join_workers(ip_port):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	s.connect((SERVER_IP, SERVER_PORT))
-	print '\tip_port inside join is {}'.format(ip_port)
 	# ex: 'JOIN,192.168.0.101,20000'
 	JOIN_REQUEST = 'JOIN,{}'.format(ip_port)
+	print "\tSending JOIN request to {}".format(SERVER_IP)
 	s.send(JOIN_REQUEST)
 	message = s.recv(BUFFER_SIZE)
-	print '\tmessage is {}'.format(message)
 	s.shutdown(socket.SHUT_RDWR) 
 	s.close()
 	if message == '0':
@@ -65,14 +73,12 @@ def main():
 	#by default it is 'localhost'
 	if len(sys.argv) > 1 and sys.argv[1] != "":
 		SERVER_IP = sys.argv[1]	
-		print 'SERVER_IP = {}'.format(SERVER_IP)
 	# bind socket and get port number
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 	s.bind(("",0))
 	s.connect((SERVER_IP, SERVER_PORT))
 	ip_port = str(s.getsockname()[0]) + ',' + str(s.getsockname()[1])
-	print 'ip_port {} is {}'.format(type(ip_port),ip_port)
 	s.shutdown(socket.SHUT_RDWR) 
 	s.close()
 	#print 'port inside main in {}'.format(ip_port)
@@ -81,8 +87,6 @@ def main():
 	if joined == 0:
 		print 'Joined successfully'
 		# listen for task
-		print 'ip_port is {}'.format(ip_port)
-		print type(ip_port)
 		listen_for_tasks(int(ip_port.split(',')[1]))
 	# else notify of something gone wrong		
 	else:

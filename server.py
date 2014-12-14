@@ -29,32 +29,31 @@ def assign_work_and_listen(worker_ip_port, arg, task):
 		return message
 	except Exception as e:
 		return e
-	
+
 def handle_work(data):
-	# ex: data = "<python code to be run>,<command line parameter to be divided among workers>"
-	# ex: data = "import sys\n x = int(sys.argv[1])\n print sum(range(0,x))\n,200"
-	# x = 200
-	x = data.split(',')[len(data.split(','))-1]
-	task = data[:len(data)-len(x)-1]
+	len_map = int(data.split(',')[0])
+	len_reducer = int(data.split(',')[1])
+	argument = int(data.split(',')[2])
+	# print argument, len_map, len_reducer
+	data = data.split('{},'.format(argument))[1]
+	map_task = data[:len_map]
+	reducer_task = data[len_map:len_map+len_reducer]
+	arguments = [argument / len(WORKERS)]*len(WORKERS)
+	for i in range(0,argument%len(WORKERS)):
+		arguments[i] += 1
 	pool = Pool(processes=len(WORKERS))
-	x = int(x) / len(WORKERS)
-	# args = [67, 67, 66]
-	args = [x]*len(WORKERS) 
-	for i in range(0,x%len(WORKERS)):
-		args[i] += 1
-	# magic
-	# (worker_ip_port, 67, task)
-	# are passed into a wrapper function
-	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, args, itertools.repeat(task)))
-	# results will look like ["text\r\n\", "text\r\n\"]
+	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
+	if len(results) > 1:
+		results = [str(int(result)) for result in results]
+		results = assign_work_and_listen(WORKERS[0], " ".join(results), reducer_task)	
 	return "".join(results)
-		
+
 def handle_join(worker_ip_port):
 	worker_ip_port = tuple(worker_ip_port)
 	if worker_ip_port not in WORKERS:
 		WORKERS.append(worker_ip_port)
-		print '\t\tNew worker added on port {}'.format(worker_ip_port)
-		print '\t\t{}'.format(WORKERS)
+		print '\t\tNew worker added on {}'.format(worker_ip_port)
+		print '\t\tWORKERS: {}'.format(WORKERS)
 		return 0
 	print '\t\tThat port is already in the worker list'
 	return 1
@@ -78,6 +77,7 @@ def main():
 		type = data.split(',')[0]
 		if type == 'JOIN':
 			# expecting form "JOIN,<MY_PORT>"
+			print "\tGot a JOIN request. Processing..."
 			if handle_join(data.split(',')[1:]) == 0:
 				conn.send('0')
 			else:
@@ -85,6 +85,7 @@ def main():
 		elif type == 'WORK':
 			# the work handler function takes
 			# as parameters the code to be run
+			print "\tGot a WORK request. Processing..."
 			res = handle_work(data[5:])
 			conn.send(res)
 		conn.close()	
