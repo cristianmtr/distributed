@@ -1,3 +1,5 @@
+# map and reduce py file should contain two comment lines at 
+# very beginning describing what they do, followed by:
 #!/usr/bin/env python
 
 import sys
@@ -37,7 +39,9 @@ def handle_work(data):
 	# print argument, len_map, len_reducer
 	data = data.split('{},'.format(argument))[1]
 	map_task = data[:len_map]
+	print "\t\tMap task: {}".format(map_task[map_task.find("#"): map_task.rfind("#")][:-1])
 	reducer_task = data[len_map:len_map+len_reducer]
+	print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
 	arguments = [argument / len(WORKERS)]*len(WORKERS)
 	for i in range(0,argument%len(WORKERS)):
 		arguments[i] += 1
@@ -46,6 +50,7 @@ def handle_work(data):
 	if len(results) > 1:
 		results = [str(int(result)) for result in results]
 		results = assign_work_and_listen(WORKERS[0], " ".join(results), reducer_task)	
+	print "\t\tResult = {}".format("".join(results)[:-1])
 	return "".join(results)
 
 def handle_join(worker_ip_port):

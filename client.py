@@ -1,3 +1,5 @@
+# map and reduce py file should contain two comment lines at 
+# very beginning describing what they do, followed by:
 #!/usr/bin/env python
 
 import sys
@@ -29,14 +31,14 @@ def work_work(data):
 		for line in task:
 			t.write(line)
 	result = subprocess.check_output(["python","task_{}_{}.py".format(WORKER_ID, TASK_ID),arg])
-	print "\t\tresult = {}".format(result)
+	print "\tresult = {}".format(result)[:-1]
 	return result
 			
 def listen_for_tasks(port):
 	global TASK_ID
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	print "listening on {}".format(port)
+	print "\tListening on {}".format(port)
 	s.bind(("",port))
 	while True:
 		s.listen(1)
@@ -44,7 +46,7 @@ def listen_for_tasks(port):
 		data = conn.recv(BUFFER_SIZE)
 		if not data: 
 			conn.close()		
-		print "\tReceived data: ..."
+		print "\tWORK: {}".format(data[data.find("#"):data.rfind("#")][:-1])
 		TASK_ID += 1
 		result = work_work(data)
 		conn.send(str(result))
@@ -85,12 +87,12 @@ def main():
 	# check to see if you can join the pool of workers
 	joined = join_workers(ip_port)
 	if joined == 0:
-		print 'Joined successfully'
+		print '\tJoined successfully'
 		# listen for task
 		listen_for_tasks(int(ip_port.split(',')[1]))
 	# else notify of something gone wrong		
 	else:
-		print 'Something went wrong'
+		print '\tSomething went wrong'
 	
 if __name__ == "__main__":
 	main()
