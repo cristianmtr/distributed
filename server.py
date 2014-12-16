@@ -33,6 +33,9 @@ def assign_work_and_listen(worker_ip_port, arg, task):
 		return e
 
 def handle_work(data):
+	# data = (length of map .py file),(length of reduce .py file),(argument for map),(code for map)(code for reduce)
+	# 
+	# for sample of data, look at the bottom of this file
 	len_map = int(data.split(',')[0])
 	len_reducer = int(data.split(',')[1])
 	argument = int(data.split(',')[2])
@@ -98,3 +101,39 @@ def main():
 if __name__ == '__main__':
 	main()
 	
+#323,441,200,# generates X random numbers between 1 and 10
+## and returns the sum
+##!/usr/bin/env python
+#import sys
+#from random import randrange
+#
+#def main():
+#	x = int(sys.argv[1])
+#	return_value = 0
+#	i = 0
+#	while i<x:
+#		i += 1
+#		return_value = return_value + randrange(1,10)
+#	return return_value
+#	
+#if __name__ == '__main__':
+#	print main()
+## takes all the results and 
+## returns their sum
+##!/usr/bin/env python
+#import sys
+#import traceback
+#
+#def main():
+#	with open("error.log","w") as log:
+#		try:
+#			return_value = 0
+#			for result in sys.argv[1:][0].split(" "):
+#				return_value = return_value + int(result)
+#			return return_value
+#		except Exception, err:
+#			log.write("{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0])))
+#		
+#if __name__ == '__main__':
+#	print main()
+
