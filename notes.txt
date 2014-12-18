@@ -1,0 +1,11 @@
+redesign packet structure in requester.py to allow for variable length input
+first: try with old map / reduce combos
+
+data = "WORK,{},{},{},{}{}{}".format(lmap,lmapinput,lreduce,maptext,mapinput,reducetext)
+
+I might just need to write another function to be distributed to the server: a task-splitter
+
+it should work like:
+    subprocess.check_output(["python","ditributor.py",arg_len(WORKERS)])
+    
+    return ["arg_for_1", "arg_for_2"]

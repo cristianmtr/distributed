@@ -37,16 +37,20 @@ def handle_work(data):
 	# 
 	# for sample of data, look at the bottom of this file
 	len_map = int(data.split(',')[0])
-	len_reducer = int(data.split(',')[1])
-	argument = int(data.split(',')[2])
-	# print argument, len_map, len_reducer
-	data = data.split('{},'.format(argument))[1]
+	len_mapinput = int(data.split(',')[1])
+	len_reducer = int(data.split(',')[2])
+	print len_map, len_mapinput, len_reducer
+	data = data.split('{},'.format(len_reducer))[1]
 	map_task = data[:len_map]
 	print "\t\tMap task: {}".format(map_task[map_task.find("#"): map_task.rfind("#")][:-1])
-	reducer_task = data[len_map:len_map+len_reducer]
+	map_input = data[len:map:len_map+len_mapinput]
+	print "\t\tMap input: {}".format(map_input)
+	reducer_task = data[len_map+len_map:len_map+len_map+len_reducer]
 	print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
-	arguments = [argument / len(WORKERS)]*len(WORKERS)
-	for i in range(0,argument%len(WORKERS)):
+	#This should be improved as to handle
+	#various other arguments
+	arguments = [map_input / len(WORKERS)]*len(WORKERS)
+	for i in range(0,map_input%len(WORKERS)):
 		arguments[i] += 1
 	pool = Pool(processes=len(WORKERS))
 	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
