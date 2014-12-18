@@ -5,6 +5,7 @@
 import sys
 import itertools
 import socket
+import subprocess
 from multiprocessing import Pool
 
 TCP_IP = 'localhost'
@@ -38,20 +39,22 @@ def handle_work(data):
 	# for sample of data, look at the bottom of this file
 	len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
-	len_reducer = int(data.split(',')[2])
-	print len_map, len_mapinput, len_reducer
+	len_distributor = int((data.split(',')[2]))
+	len_reducer = int(data.split(',')[3])
+	#print len_map, len_mapinput, len_distributor, len_reducer
 	data = data.split('{},'.format(len_reducer))[1]
 	map_task = data[:len_map]
-	print "\t\tMap task: {}".format(map_task[map_task.find("#"): map_task.rfind("#")][:-1])
-	map_input = data[len:map:len_map+len_mapinput]
-	print "\t\tMap input: {}".format(map_input)
-	reducer_task = data[len_map+len_map:len_map+len_map+len_reducer]
-	print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
-	#This should be improved as to handle
-	#various other arguments
-	arguments = [map_input / len(WORKERS)]*len(WORKERS)
-	for i in range(0,map_input%len(WORKERS)):
-		arguments[i] += 1
+	#print "\t\tMap task: {}".format(map_task[map_task.find("#"): map_task.rfind("#")][:-1])
+	map_input = data[len_map:len_map+len_mapinput]
+	#print "\t\tMap input: {}".format(map_input)
+	distributor_task = data[len_map+len_mapinput:len_map+len_mapinput+len_distributor]
+	#print "\t\tDistributor task: {}".format(distributor_task[distributor_task.find("#"): distributor_task.rfind("#")][:-1])
+	reducer_task = data[len_map+len_mapinput+len_distributor:len_map+len_mapinput+len_distributor+len_reducer]
+	#print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
+	#This WILL be passed from the requester.py
+	#and will return a list of arguments for each worker
+	arguments = subprocess.check_output(["python","distributor.py",str(len(WORKERS)),map_input])
+	#print "arguments = {}".format(arguments)
 	pool = Pool(processes=len(WORKERS))
 	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
 	if len(results) > 1:
@@ -98,6 +101,7 @@ def main():
 			# the work handler function takes
 			# as parameters the code to be run
 			print "\tGot a WORK request. Processing..."
+			print data[5:]
 			res = handle_work(data[5:])
 			conn.send(res)
 		conn.close()	

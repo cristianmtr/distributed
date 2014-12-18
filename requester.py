@@ -12,29 +12,34 @@ SERVER_PORT = 5005
 
 def main():
 	if len(sys.argv) <= 2:
-		print '''Usage: requester.py <file with map func>.py <parameter to be passed to map func> <file with reduce func>.py
+		print '''Usage: requester.py <file with map func>.py <map input> <distributor> <file with reduce func>.py
 example: requester.py map.py 200 reduce.py'''
 		return
 	try:
-		maptext = ''
-		mapinput = ''
-		reducetext = ''
+		map_task = ''
+		map_input = ''
+		distributor_task = ''
+		reduce_task = ''
 		with open(sys.argv[1], 'r') as f:
 			for line in f:
-				maptext += line
+				map_task += line
 		if os.path.isfile(sys.argv[2]):
 			with open(sys.argv[2], 'r') as f:
 				for line in f:
-					mapinput += line
+					map_input += line
 		else:
-			mapinput = sys.argv[2]
+			map_input = sys.argv[2]
 		with open(sys.argv[3],'r') as f:
 			for line in f:
-				reducetext += line
-		lmap = len(maptext)
-		lmapinput = len(mapinput)
-		lreduce = len(reducetext)
-		data = "WORK,{},{},{},{}{}{}".format(lmap,lmapinput,lreduce,maptext,mapinput,reducetext)
+				distributor_task += line
+		with open(sys.argv[4],'r') as f:
+			for line in f:
+				reduce_task += line
+		lmap = len(map_task)
+		lmap_input = len(map_input)
+		ldistributor = len(distributor_task)
+		lreduce = len(reduce_task)
+		data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.bind(("",6006))
