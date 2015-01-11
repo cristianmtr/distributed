@@ -1,2 +1,13 @@
-PROBLEM FOUND:
-    BUFFER_SIZE: data is only partially received; need to find a way to loop through the buffer until the entire data is received;
+PROBLEMS
+    do multiple attempts on server:
+    for i in range(attempts)    
+        try:
+        
+        except:
+    TRY small timewait on either server and/or worker side;
+    do Wireshark packet analysis	
+    
+
+
+
+

@@ -6,18 +6,48 @@ import sys
 import itertools
 import socket
 import subprocess
-from multiprocessing import Pool
+from multiprocessing import Pool, Process, Queue
+import time
 
 TCP_IP = 'localhost'
 TCP_PORT = 5005
+SIGEND = "\nSIGEND"
 BUFFER_SIZE = 1024  
 
 WORKERS = []
 
-# data should be the contents of a .py file to be run on the workers
-# and the variable that can be split across the workers
-# ex : ['content of calculate_sum_of_x_random_numbers.py','x = 999']
-
+def queuer(queue):
+        #
+        # Listens for tasks and adds them to the queue;
+        #
+        while True:
+                task = read_socket()
+                queue.put(task)
+                print "QUEUER: Added task: {}".format(task)
+        
+def listener(queue):
+        #
+        # checks if the queue contains a task
+        # if it does, it checks for the type 
+        # and then passes it to the handler
+        # 
+        while True:
+                if not queue.empty():
+                        data = queue.get()
+                        print "LISTENER: got task: {}".format(data)
+                        type = data.split(",")[0]
+                        if type == 'JOIN':
+                                # expecting form "JOIN,<MY_IP_PORT>"
+                                print "JOIN request processing..."
+                                if handle_join(data.split(',')[1:]) == 1:
+                                        print "Something went wrong when adding a new worker"
+                        elif type == 'WORK':
+                                # expecting form "WORK,<TASK>"
+                                print "Got a WORK request. Processing..."
+                                if handle_work(data.split(',')[1:]) == 1:
+                                        print "Something went wrong when processing task"
+                
+                
 def assign_work_and_listen_star(a_b_c):
 	return assign_work_and_listen(*a_b_c)
 
@@ -33,6 +63,29 @@ def assign_work_and_listen(worker_ip_port, arg, task):
 	except Exception as e:
 		return e
 
+def read_socket():
+       s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+       s.bind(("",5005))
+       while True:
+               buffer = ''
+               data = True
+               s.listen(0)
+               conn, addr = s.accept()
+               while data:
+                        data = conn.recv(BUFFER_SIZE)
+                        # if the SIGNAL for end of packet is found in current packet
+                        # add only up to that part
+                        # close socket
+                        # return data
+                        if data.find(SIGEND) != -1:
+                                buffer += data[:data.rfind(SIGEND)]
+                                conn.close()
+                                s.close()
+                                return buffer
+                        else:
+                                buffer += data
+                        
 def handle_work(data):
 	# data = (length of map .py file),(length of reduce .py file),(argument for map),(code for map)(code for reduce)
 	# 
@@ -65,49 +118,33 @@ def handle_work(data):
 
 def handle_join(worker_ip_port):
 	worker_ip_port = tuple(worker_ip_port)
-	if worker_ip_port not in WORKERS:
-		WORKERS.append(worker_ip_port)
-		print '\t\tNew worker added on {}'.format(worker_ip_port)
-		print '\t\tWORKERS: {}'.format(WORKERS)
-		return 0
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        print "Trying to connect to {}".format(worker_ip_port)
+        for i in range(3):
+                try:
+                        s.connect(("",int(worker_ip_port[1])))
+                        if worker_ip_port not in WORKERS:
+                                WORKERS.append(worker_ip_port)
+                                print '\t\tNew worker added on {}'.format(worker_ip_port)
+                                print '\t\tWORKERS: {}'.format(WORKERS)
+                                s.send('0'+SIGEND)
+                                s.close()
+                                return 0
+                except Exception as e:
+                        pass
 	print '\t\tThat port is already in the worker list'
+        s.send('1'+SIGEND)
+        s.close()
 	return 1
-		
-# the listen forever loop
-# bind and listen
-# distribute requests by type
-# to their specific functions
-def main():
-	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-	s.bind((TCP_IP, TCP_PORT))
-	
-	while True:
-		s.listen(1)
-		conn, addr = s.accept()
-		data = conn.recv(BUFFER_SIZE)
-		if not data: 
-			conn.close()		
-		# print "\tReceived data:", data[1][:5]
-		type = data.split(',')[0]
-		if type == 'JOIN':
-			# expecting form "JOIN,<MY_PORT>"
-			print "\tGot a JOIN request. Processing..."
-			if handle_join(data.split(',')[1:]) == 0:
-				conn.send('0')
-			else:
-				conn.send('1')
-		elif type == 'WORK':
-			# the work handler function takes
-			# as parameters the code to be run
-			print "\tGot a WORK request. Processing..."
-			print data[5:]
-			res = handle_work(data[5:])
-			conn.send(res)
-		conn.close()	
 
 if __name__ == '__main__':
-	main()
+        q = Queue()
+        a = Process(target=queuer, args=(q,))
+        b = Process(target=listener, args=(q,))
+        a.start()
+        b.start()
+
 	
 #323,441,200,# generates X random numbers between 1 and 10
 ## and returns the sum
