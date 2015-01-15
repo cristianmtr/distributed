@@ -13,7 +13,11 @@ def main():
             args = [map_input / nr_workers]*nr_workers
             for i in range(0,map_input%nr_workers):
                 args[i] += 1
-            print args
+            log.write("args = \n{}".format(args))
+            buffer = ''
+            for arg in args:
+                buffer += "{}\nSIGEND".format(arg)
+            print buffer
             return 0
         except Exception, err:
             log.write("{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0])))

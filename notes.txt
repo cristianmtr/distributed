@@ -1,13 +1,5 @@
 PROBLEMS
-    do multiple attempts on server:
-    for i in range(attempts)    
-        try:
-        
-        except:
-    TRY small timewait on either server and/or worker side;
-    do Wireshark packet analysis	
-    
-
-
-
-
+	Server is providing result, but doesn't reply to requester;
+	1. make requester listen on loop until SIGEND
+	2. in server.py add a global list of requesters
+	3. make handle_work reply to oldest entry in requesters with result

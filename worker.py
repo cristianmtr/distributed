@@ -48,18 +48,18 @@ def read_socket():
                              buffer += data
                         
 def work_work(data):
-	global TASK_ID
-	global WORKER_ID
-	arg = data.split(',')[0]
-	if type(arg) == list:
-		arg = " ".join(arg)
-	task = data[len(arg)+1:]
-	with open("task_{}_{}.py".format(WORKER_ID, TASK_ID),"w") as t:
-		for line in task:
-			t.write(line)
-	result = subprocess.check_output(["python","task_{}_{}.py".format(WORKER_ID, TASK_ID),arg])
-	print "\tresult = {}".format(result)[:-1]
-	return result
+       print "data = {}".format(data)
+       global TASK_ID
+       global WORKER_ID
+       arg = data.split(',')[0]
+       print "arg = {}".format(arg)
+       data = data[len(arg)+1:]
+       with open("task_{}_{}.py".format(WORKER_ID, TASK_ID),"w") as t:
+              for line in data:
+                     t.write(line)
+       result = subprocess.check_output(["python","task_{}_{}.py".format(WORKER_ID, TASK_ID),arg])
+       print "\tresult = {}".format(result)[:-1]
+       return result
 			
 def listen_for_tasks():
 	global TASK_ID
@@ -76,7 +76,7 @@ def listen_for_tasks():
 			conn.close()		
 		print "\tWORK: {}".format(data[data.find("#"):data.rfind("#")][:-1])
 		TASK_ID += 1
-		result = work_work(data)
+                result = work_work(data)
 		conn.send(str(result))
 		conn.close()	
 	return 0

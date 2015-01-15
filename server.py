@@ -7,7 +7,6 @@ import itertools
 import socket
 import subprocess
 from multiprocessing import Pool, Process, Queue
-import time
 
 TCP_IP = 'localhost'
 TCP_PORT = 5005
@@ -15,6 +14,7 @@ SIGEND = "\nSIGEND"
 BUFFER_SIZE = 1024  
 
 WORKERS = []
+REQUESTERS = []
 
 def queuer(queue):
         #
@@ -23,7 +23,7 @@ def queuer(queue):
         while True:
                 task = read_socket()
                 queue.put(task)
-                print "QUEUER: Added task: {}".format(task)
+                # print "QUEUER: Added task: {}".format(task)
         
 def listener(queue):
         #
@@ -33,7 +33,8 @@ def listener(queue):
         # 
         while True:
                 if not queue.empty():
-                        data = queue.get()
+                        q_tuple = queue.get()
+                        data = q_tuple[0]
                         print "LISTENER: got task: {}".format(data)
                         type = data.split(",")[0]
                         if type == 'JOIN':
@@ -42,9 +43,12 @@ def listener(queue):
                                 if handle_join(data.split(',')[1:]) == 1:
                                         print "Something went wrong when adding a new worker"
                         elif type == 'WORK':
+                                print """Inside listener, after elif type == 'WORK':
+REQUESTERS = \n{}""".format(REQUESTERS)
                                 # expecting form "WORK,<TASK>"
                                 print "Got a WORK request. Processing..."
-                                if handle_work(data.split(',')[1:]) == 1:
+                                if handle_work(data[data.find(',')+1:], q_tuple[1]) == 1:
+                                # if handle_work(''.join(data.split(',')[1:])) == 1:
                                         print "Something went wrong when processing task"
                 
                 
@@ -53,26 +57,29 @@ def assign_work_and_listen_star(a_b_c):
 
 def assign_work_and_listen(worker_ip_port, arg, task):
 	try:
+                print "In assign_work ARG = \n{}".format(arg)
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.connect((worker_ip_port[0], int(worker_ip_port[1])))
 		s.send(str(arg)+','+task) 
-		# return 'Sent {}'.format(str(arg)+','+task)
+		# print 'Sent {}'.format(str(arg)+','+task)
 		message = s.recv(BUFFER_SIZE)
 		return message
 	except Exception as e:
 		return e
 
 def read_socket():
-       s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-       s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-       s.bind(("",5005))
-       while True:
-               buffer = ''
-               data = True
-               s.listen(0)
-               conn, addr = s.accept()
-               while data:
+        global REQUESTERS
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("",5005))
+        while True:
+                buffer = ''
+                data = True
+                s.listen(0)
+                conn, addr = s.accept()
+                print "ADDR = \n{}".format(addr)
+                while data:
                         data = conn.recv(BUFFER_SIZE)
                         # if the SIGNAL for end of packet is found in current packet
                         # add only up to that part
@@ -82,15 +89,26 @@ def read_socket():
                                 buffer += data[:data.rfind(SIGEND)]
                                 conn.close()
                                 s.close()
-                                return buffer
+                                if buffer[:4] == 'WORK':
+                                        REQUESTERS.append(addr)
+                                        print """Inside read_socket:
+REQUESTERS = \n{}""".format(REQUESTERS)
+                                return (buffer, addr)
                         else:
                                 buffer += data
                         
-def handle_work(data):
-	# data = (length of map .py file),(length of reduce .py file),(argument for map),(code for map)(code for reduce)
+def handle_work(data, ip_port_requester):
+        global REQUESTERS
+	# data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
 	# 
 	# for sample of data, look at the bottom of this file
-	len_map = int(data.split(',')[0])
+        print "data inside handle_work: \n {}".format(data)
+        # position = find_nth(data, ",", 2)+1
+        # ip_port_requester = data[:position]
+        # ip_port_requester = ip_port_requester.split(',')[0] + int(ip_port_requester.split(',')[1])
+        print "ip_port_requester: type: {} \n{}".format(type(ip_port_requester), ip_port_requester)
+        # data = data[position+1:]
+        len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
 	len_distributor = int((data.split(',')[2]))
 	len_reducer = int(data.split(',')[3])
@@ -106,15 +124,39 @@ def handle_work(data):
 	#print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
 	#This WILL be passed from the requester.py
 	#and will return a list of arguments for each worker
+        with open("distributor.py", "w") as t:
+                for line in distributor_task:
+                        t.write(line)
 	arguments = subprocess.check_output(["python","distributor.py",str(len(WORKERS)),map_input])
-	#print "arguments = {}".format(arguments)
+        arguments = arguments.split("\nSIGEND")
+        arguments.pop()
+	print "arguments = {}".format(arguments)
 	pool = Pool(processes=len(WORKERS))
 	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
+        print "REDUCER = \n{}".format(reducer_task)
 	if len(results) > 1:
 		results = [str(int(result)) for result in results]
 		results = assign_work_and_listen(WORKERS[0], " ".join(results), reducer_task)	
 	print "\t\tResult = {}".format("".join(results)[:-1])
-	return "".join(results)
+        #
+        # return results to first item in REQUESTERS and then remove that item
+        #
+        # print 'type for REQUESTERS = \n{}'.format(type(REQUESTERS))
+        # print "REQUESTERS = \n{}".format(REQUESTERS)
+        # ip_port_requester = REQUESTERS[0]
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        i = 0
+        while i<3:
+                try:
+                        s.connect((ip_port_requester))
+                        s.send("".join(results)+SIGEND)
+                        s.close()
+                        return
+                except Exception as e:
+                        i+=1
+                        pass
+
 
 def handle_join(worker_ip_port):
 	worker_ip_port = tuple(worker_ip_port)
@@ -138,47 +180,23 @@ def handle_join(worker_ip_port):
         s.close()
 	return 1
 
+def find_nth(text, subst, n):
+        # in a string of text
+        # look for substring subst
+        # until you have reached the nth time it appears
+        # returns the last position before that
+        # occurrence of subst
+        i = 0
+        ret = 0
+        while i != n:
+                ret += text.find(subst)
+                text = text[ret+1:]
+                i += 1
+        return ret
+
 if __name__ == '__main__':
         q = Queue()
         a = Process(target=queuer, args=(q,))
         b = Process(target=listener, args=(q,))
         a.start()
         b.start()
-
-	
-#323,441,200,# generates X random numbers between 1 and 10
-## and returns the sum
-##!/usr/bin/env python
-#import sys
-#from random import randrange
-#
-#def main():
-#	x = int(sys.argv[1])
-#	return_value = 0
-#	i = 0
-#	while i<x:
-#		i += 1
-#		return_value = return_value + randrange(1,10)
-#	return return_value
-#	
-#if __name__ == '__main__':
-#	print main()
-## takes all the results and 
-## returns their sum
-##!/usr/bin/env python
-#import sys
-#import traceback
-#
-#def main():
-#	with open("error.log","w") as log:
-#		try:
-#			return_value = 0
-#			for result in sys.argv[1:][0].split(" "):
-#				return_value = return_value + int(result)
-#			return return_value
-#		except Exception, err:
-#			log.write("{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0])))
-#		
-#if __name__ == '__main__':
-#	print main()
-

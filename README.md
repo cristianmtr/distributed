@@ -7,9 +7,9 @@ USE CASE FOR THE TIME BEING
 
 "python server.py"
 
-"python client.py" - this can be run as many times as you want to; it will just add more workers to the hive;
+"python worker.py" (can be started as many times as you want. it will just add more workers to the pool)
 
-"python requester.py" - this is the request initiator script. See comments inside for instructions for cl-arguments
+"python requester.py <arguments>" (read the help text for more info on the argumnets to be passed)
 
 Tested on Windows and Linux. 
 
