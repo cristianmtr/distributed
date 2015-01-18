@@ -11,10 +11,10 @@ from multiprocessing import Pool, Process, Queue
 TCP_IP = 'localhost'
 TCP_PORT = 5005
 SIGEND = "\nSIGEND"
+ARGEND = "\ARGEND"
 BUFFER_SIZE = 1024  
 
 WORKERS = []
-REQUESTERS = []
 
 def queuer(queue):
         #
@@ -23,7 +23,6 @@ def queuer(queue):
         while True:
                 task = read_socket()
                 queue.put(task)
-                # print "QUEUER: Added task: {}".format(task)
         
 def listener(queue):
         #
@@ -34,21 +33,18 @@ def listener(queue):
         while True:
                 if not queue.empty():
                         q_tuple = queue.get()
-                        data = q_tuple[0]
-                        print "LISTENER: got task: {}".format(data)
-                        type = data.split(",")[0]
+                        # the q_tuple will contain the data itself and the ip_port tuple of the sending host (either a worker or a requester)
+                        # we will only care for that in the event of a work request
+                        # so it's not used in the handle_join function
+                        print "LISTENER got task"
+                        type = q_tuple[0].split(",")[0]
                         if type == 'JOIN':
-                                # expecting form "JOIN,<MY_IP_PORT>"
                                 print "JOIN request processing..."
-                                if handle_join(data.split(',')[1:]) == 1:
+                                if handle_join(q_tuple[0].split(',')[1:]) == 1:
                                         print "Something went wrong when adding a new worker"
                         elif type == 'WORK':
-                                print """Inside listener, after elif type == 'WORK':
-REQUESTERS = \n{}""".format(REQUESTERS)
-                                # expecting form "WORK,<TASK>"
                                 print "Got a WORK request. Processing..."
-                                if handle_work(data[data.find(',')+1:], q_tuple[1]) == 1:
-                                # if handle_work(''.join(data.split(',')[1:])) == 1:
+                                if handle_work(q_tuple[0][q_tuple[0].find(',')+1:], q_tuple[1]) == 1:
                                         print "Something went wrong when processing task"
                 
                 
@@ -57,19 +53,17 @@ def assign_work_and_listen_star(a_b_c):
 
 def assign_work_and_listen(worker_ip_port, arg, task):
 	try:
-                print "In assign_work ARG = \n{}".format(arg)
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.connect((worker_ip_port[0], int(worker_ip_port[1])))
-		s.send(str(arg)+','+task) 
-		# print 'Sent {}'.format(str(arg)+','+task)
+                # print "Sent:\n{}".format(str(arg)+','+task)
+		s.send(str(arg)+ARGEND+task+SIGEND) 
 		message = s.recv(BUFFER_SIZE)
-		return message
+		return message[:-1]
 	except Exception as e:
 		return e
 
 def read_socket():
-        global REQUESTERS
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind(("",5005))
@@ -78,7 +72,6 @@ def read_socket():
                 data = True
                 s.listen(0)
                 conn, addr = s.accept()
-                print "ADDR = \n{}".format(addr)
                 while data:
                         data = conn.recv(BUFFER_SIZE)
                         # if the SIGNAL for end of packet is found in current packet
@@ -89,80 +82,82 @@ def read_socket():
                                 buffer += data[:data.rfind(SIGEND)]
                                 conn.close()
                                 s.close()
-                                if buffer[:4] == 'WORK':
-                                        REQUESTERS.append(addr)
-                                        print """Inside read_socket:
-REQUESTERS = \n{}""".format(REQUESTERS)
                                 return (buffer, addr)
                         else:
                                 buffer += data
                         
 def handle_work(data, ip_port_requester):
-        global REQUESTERS
 	# data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
-	# 
-	# for sample of data, look at the bottom of this file
-        print "data inside handle_work: \n {}".format(data)
-        # position = find_nth(data, ",", 2)+1
-        # ip_port_requester = data[:position]
-        # ip_port_requester = ip_port_requester.split(',')[0] + int(ip_port_requester.split(',')[1])
-        print "ip_port_requester: type: {} \n{}".format(type(ip_port_requester), ip_port_requester)
-        # data = data[position+1:]
+	#
+        print "\tHandling work from {}".format(ip_port_requester)
         len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
 	len_distributor = int((data.split(',')[2]))
 	len_reducer = int(data.split(',')[3])
-	#print len_map, len_mapinput, len_distributor, len_reducer
-	data = data.split('{},'.format(len_reducer))[1]
+        data = data.split('{},'.format(len_reducer))[1]
 	map_task = data[:len_map]
-	#print "\t\tMap task: {}".format(map_task[map_task.find("#"): map_task.rfind("#")][:-1])
-	map_input = data[len_map:len_map+len_mapinput]
-	#print "\t\tMap input: {}".format(map_input)
-	distributor_task = data[len_map+len_mapinput:len_map+len_mapinput+len_distributor]
-	#print "\t\tDistributor task: {}".format(distributor_task[distributor_task.find("#"): distributor_task.rfind("#")][:-1])
-	reducer_task = data[len_map+len_mapinput+len_distributor:len_map+len_mapinput+len_distributor+len_reducer]
-	#print "\t\tReducer task: {}".format(reducer_task[reducer_task.find("#"): reducer_task.rfind("#")][:-1])
-	#This WILL be passed from the requester.py
-	#and will return a list of arguments for each worker
+        print "map task is \n{}".format(map_task)
+        map_input = data[len_map:len_map+len_mapinput]
+        print "map input is \n{}".format(map_input)
+        distributor_task = data[len_map+len_mapinput:len_map+len_mapinput+len_distributor]
+        print "distributor task is \n{}".format(distributor_task)
+        reducer_task = data[len_map+len_mapinput+len_distributor:len_map+len_mapinput+len_distributor+len_reducer]
+        print "Reducer task is \n{}".format(reducer_task)
+        arguments = get_arguments(distributor_task, map_input)
+        print "\targuments = {}".format(arguments)
+        results = get_map_results(map_task, arguments)
+        print "\tresults from map: {}".format(results)
+	if len(results) > 1:
+		# results = [str(int(result)) for result in results]
+		results = assign_work_and_listen(WORKERS[0], "".join(res for res in results), reducer_task)	
+	print "\tResult = {}".format("".join(results)[:-1])
+        success = send_result_to_requester(results, ip_port_requester)
+        if success == True:
+                return 0
+        elif success == False:
+                return 1
+
+def get_map_results(map_task, arguments):
+        global WORKERS
+        pool = Pool(processes=len(WORKERS))
+	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
+        return results
+
+# arguments that will be passed to each of the workers
+# it is a list where each item is a string that will passed to
+# the worker corresponding to its index
+def get_arguments(distributor_task, map_input):
+        global WORKERS
         with open("distributor.py", "w") as t:
                 for line in distributor_task:
                         t.write(line)
 	arguments = subprocess.check_output(["python","distributor.py",str(len(WORKERS)),map_input])
-        arguments = arguments.split("\nSIGEND")
-        arguments.pop()
-	print "arguments = {}".format(arguments)
-	pool = Pool(processes=len(WORKERS))
-	results = pool.map(assign_work_and_listen_star, itertools.izip(WORKERS, arguments, itertools.repeat(map_task)))
-        print "REDUCER = \n{}".format(reducer_task)
-	if len(results) > 1:
-		results = [str(int(result)) for result in results]
-		results = assign_work_and_listen(WORKERS[0], " ".join(results), reducer_task)	
-	print "\t\tResult = {}".format("".join(results)[:-1])
-        #
-        # return results to first item in REQUESTERS and then remove that item
-        #
-        # print 'type for REQUESTERS = \n{}'.format(type(REQUESTERS))
-        # print "REQUESTERS = \n{}".format(REQUESTERS)
-        # ip_port_requester = REQUESTERS[0]
+        arguments = arguments.split("\nSIGEND")[:-1]
+        return arguments
+
+def send_result_to_requester(results, ip_port_requester):
+        results = "".join(results)
+        results = results.replace(";","\n")
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         i = 0
         while i<3:
                 try:
                         s.connect((ip_port_requester))
-                        s.send("".join(results)+SIGEND)
+                        s.send(results+SIGEND)
                         s.close()
-                        return
+                        return True
                 except Exception as e:
                         i+=1
                         pass
+        return False
 
-
+                
 def handle_join(worker_ip_port):
 	worker_ip_port = tuple(worker_ip_port)
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        print "Trying to connect to {}".format(worker_ip_port)
+        # print "Trying to connect to {}".format(worker_ip_port)
         for i in range(3):
                 try:
                         s.connect(("",int(worker_ip_port[1])))

@@ -12,6 +12,7 @@ import string
 # SERVER
 # By default the ip is localhost
 SIGEND = '\nSIGEND'
+ARGEND = '\ARGEND'
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 5005
 # WORKER
@@ -51,9 +52,9 @@ def work_work(data):
        print "data = {}".format(data)
        global TASK_ID
        global WORKER_ID
-       arg = data.split(',')[0]
+       arg = data.split(ARGEND)[0]
        print "arg = {}".format(arg)
-       data = data[len(arg)+1:]
+       data = data[len(arg)+len(ARGEND):]
        with open("task_{}_{}.py".format(WORKER_ID, TASK_ID),"w") as t:
               for line in data:
                      t.write(line)
@@ -71,9 +72,16 @@ def listen_for_tasks():
 	while True:
 		s.listen(1)
 		conn, addr = s.accept()
-		data = conn.recv(BUFFER_SIZE)
-		if not data: 
-			conn.close()		
+                print "Accepted connection"
+                data = ""
+                not_sigend = True
+                while not_sigend:
+                       print "Init. buffer read"
+                       buffer = conn.recv(BUFFER_SIZE)
+                       if buffer.rfind(SIGEND) != -1:
+                              buffer = buffer[:buffer.rfind(SIGEND)]
+                              not_sigend = False
+                       data += buffer       
 		print "\tWORK: {}".format(data[data.find("#"):data.rfind("#")][:-1])
 		TASK_ID += 1
                 result = work_work(data)

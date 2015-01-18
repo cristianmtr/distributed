@@ -21,7 +21,7 @@ def main():
             return 0
         except Exception, err:
             log.write("{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0])))
-            return 0
+            return 1
  
     
 if __name__ == '__main__':

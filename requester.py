@@ -17,7 +17,11 @@ def main():
 example: requester.py map.py 200 reduce.py'''
 		return
 	try:
-		map_task = ''
+                print "argv1 = {}".format(sys.argv[1])
+                print "argv2 = {}".format(sys.argv[2])
+                print "argv3 = {}".format(sys.argv[3])
+                print "argv4 = {}".format(sys.argv[4])
+                map_task = ''
 		map_input = ''
 		distributor_task = ''
 		reduce_task = ''
