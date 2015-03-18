@@ -1,4 +1,4 @@
-distrib
+distributed
 =======
 
 Project for learning distributed systems architecture
@@ -18,6 +18,7 @@ NOTES
 =====
 
 PROBLEMS
+- writing a script to test a specific case
 
 
 
