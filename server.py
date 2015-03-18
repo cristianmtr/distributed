@@ -173,7 +173,6 @@ def handle_join(worker_ip_port):
                 except Exception as e:
                         pass
 	print '\t\tThat port is already in the worker list'
-        s.send('1'+SIGEND)
         s.close()
 	return 1
 
