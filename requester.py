@@ -50,14 +50,13 @@ example: requester.py map.py 200 reduce.py'''
 		s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 		s.bind(("",6006))
 		s.connect((SERVER_IP, SERVER_PORT))
-                ip_port = str(s.getsockname()[0]) + ',' + str(s.getsockname()[1])
                 data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
                 s.send(data+SIGEND)
 		s.shutdown(socket.SHUT_RDWR)
 		s.close()
                 res = read_socket()[0]
 		print res
-	except Exception as e:
+	except Exception:
 		print "{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0]))
 
 def read_socket():
