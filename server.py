@@ -2,7 +2,6 @@
 # very beginning describing what they do, followed by:
 #!/usr/bin/env python
 
-import sys
 import itertools
 import socket
 import subprocess
@@ -149,7 +148,7 @@ def send_result_to_requester(results, ip_port_requester):
                         s.send(results+SIGEND)
                         s.close()
                         return True
-                except Exception as e:
+                except Exception:
                         i+=1
                         pass
         return False

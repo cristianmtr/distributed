@@ -2,7 +2,6 @@
 # very beginning describing what they do, followed by:
 #!/usr/bin/env python
 
-from random import randint
 import sys
 import subprocess
 import socket
