@@ -18,10 +18,8 @@ NOTES
 =====
 
 PROBLEMS
-- The tasks for additions and multiplication need to be updated to the key-value system. Need to pay attention to formatting of results and arguments. 
-- Find out why there are orphaned server processes after Keyboard Interrupt is issued
 
-CAN BE OPTIMIZED
-worker.py
-arg = data.split can be replaced with something like arg = data[:data.find(ARGEND)]
+
+
+
 

@@ -6,6 +6,7 @@ from random import randint
 import sys
 import subprocess
 import socket
+from os.path import join as pathjoin
 import random
 import string
 
@@ -55,10 +56,11 @@ def work_work(data):
        arg = data.split(ARGEND)[0]
        print "arg = {}".format(arg)
        data = data[len(arg)+len(ARGEND):]
-       with open("task_{}_{}.py".format(WORKER_ID, TASK_ID),"w") as t:
+       tmp_task_file = pathjoin(".","tmp","task_{}_{}.py".format(WORKER_ID, TASK_ID))
+       with open(tmp_task_file,"w") as t:
               for line in data:
                      t.write(line)
-       result = subprocess.check_output(["python","task_{}_{}.py".format(WORKER_ID, TASK_ID),arg])
+       result = subprocess.check_output(["python",tmp_task_file,arg])
        print "\tresult = {}".format(result)[:-1]
        return result
 			

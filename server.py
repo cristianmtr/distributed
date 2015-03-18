@@ -6,6 +6,7 @@ import sys
 import itertools
 import socket
 import subprocess
+from os.path import join as pathjoin
 from multiprocessing import Pool, Process, Queue
 
 TCP_IP = 'localhost'
@@ -128,10 +129,11 @@ def get_map_results(map_task, arguments):
 # the worker corresponding to its index
 def get_arguments(distributor_task, map_input):
         global WORKERS
-        with open("distributor.py", "w") as t:
+        tmp_distributor_file = pathjoin(".","tmp","distributor.py")
+        with open(tmp_distributor_file, "w") as t:
                 for line in distributor_task:
                         t.write(line)
-	arguments = subprocess.check_output(["python","distributor.py",str(len(WORKERS)),map_input])
+	arguments = subprocess.check_output(["python",tmp_distributor_file,str(len(WORKERS)),map_input])
         arguments = arguments.split("\nSIGEND")[:-1]
         return arguments
 

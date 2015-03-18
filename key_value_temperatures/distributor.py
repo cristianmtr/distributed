@@ -5,9 +5,12 @@
 import sys
 import traceback
 import itertools
+from os.path import join as pathjoin
+
+LOG_FILE = pathjoin(".","tmp","distributor.log")
 
 def main():
-    with open("distributor.log","w") as log:
+    with open(LOG_FILE,"w") as log:
         try:
             log.write("{}".format(sys.argv[1]))
             nr_workers = int(sys.argv[1])
@@ -32,7 +35,7 @@ def main():
                 prnt += "{}\nSIGEND".format(arg)
             print prnt
             return 0 
-        except Exception as e:
+        except Exception:
             log.write("{}\n{}".format(str(traceback.format_exc()), str(sys.exc_info()[0])))
             return 1
                                     
