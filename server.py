@@ -91,8 +91,6 @@ def read_socket():
 def handle_work(data):
 	# data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
 	#
-        with open("data.txt", "w") as f:
-                f.write(data)
         len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
 	len_distributor = int((data.split(',')[2]))
