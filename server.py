@@ -7,6 +7,7 @@ import socket
 import subprocess
 from os.path import join as pathjoin
 from multiprocessing import Pool, Process, Queue
+from module import my_extract
 
 TCP_IP = 'localhost'
 TCP_PORT = 5005
@@ -46,7 +47,8 @@ def listener(queue):
                                 print "Got a WORK request. Processing..."
                                 data = q_tuple[0][q_tuple[0].find(',')+1:]
                                 ip_port_requester = q_tuple[1]
-                                results =  handle_work(data)
+                                tasks_input = my_extract(data)
+                                results =  handle_work(tasks_input)
                                 send_result_to_requester(results, ip_port_requester)
                 
                 
@@ -88,9 +90,11 @@ def read_socket():
                         else:
                                 buffer += data
                         
-def handle_work(data):
+def extract_tasks_and_input(data):
 	# data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
 	#
+        with open('data.txt','w') as f:
+                f.write(data)
         len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
 	len_distributor = int((data.split(',')[2]))
@@ -104,13 +108,18 @@ def handle_work(data):
         print "distributor task is \n{}".format(distributor_task)
         reducer_task = data[len_map+len_mapinput+len_distributor:len_map+len_mapinput+len_distributor+len_reducer]
         print "Reducer task is \n{}".format(reducer_task)
-        arguments = get_arguments(distributor_task, map_input)
+        return [map_task, map_input, distributor_task, reducer_task]
+        
+
+def handle_work(tasks_input):
+        # tasks_input looks like this: [map_task, map_input, distributor_task, reducer_task]
+        arguments = get_arguments(tasks_input[2], tasks_input[1])
         print "\targuments = {}".format(arguments)
-        results = get_map_results(map_task, arguments)
+        results = get_map_results(tasks_input[0], arguments)
         print "\tresults from map: {}".format(results)
 	if len(results) > 1:
 		# results = [str(int(result)) for result in results]
-		results = assign_work_and_listen(WORKERS[0], "".join(res for res in results), reducer_task)
+		results = assign_work_and_listen(WORKERS[0], "".join(res for res in results), tasks_input[3])
         results = "".join(results)[:-1]
 	print "\tResult = {}".format(results)
         return results
