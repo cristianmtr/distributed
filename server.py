@@ -44,8 +44,10 @@ def listener(queue):
                                         print "Something went wrong when adding a new worker"
                         elif type == 'WORK':
                                 print "Got a WORK request. Processing..."
-                                if handle_work(q_tuple[0][q_tuple[0].find(',')+1:], q_tuple[1]) == 1:
-                                        print "Something went wrong when processing task"
+                                data = q_tuple[0][q_tuple[0].find(',')+1:]
+                                ip_port_requester = q_tuple[1]
+                                results =  handle_work(data)
+                                send_result_to_requester(results, ip_port_requester)
                 
                 
 def assign_work_and_listen_star(a_b_c):
@@ -86,10 +88,11 @@ def read_socket():
                         else:
                                 buffer += data
                         
-def handle_work(data, ip_port_requester):
+def handle_work(data):
 	# data = "WORK,{},{},{},{},{}{}{}{}".format(lmap,lmap_input,ldistributor,lreduce,map_task,map_input,distributor_task,reduce_task)
 	#
-        print "\tHandling work from {}".format(ip_port_requester)
+        with open("data.txt", "w") as f:
+                f.write(data)
         len_map = int(data.split(',')[0])
 	len_mapinput = int(data.split(',')[1])
 	len_distributor = int((data.split(',')[2]))
@@ -109,14 +112,12 @@ def handle_work(data, ip_port_requester):
         print "\tresults from map: {}".format(results)
 	if len(results) > 1:
 		# results = [str(int(result)) for result in results]
-		results = assign_work_and_listen(WORKERS[0], "".join(res for res in results), reducer_task)	
-	print "\tResult = {}".format("".join(results)[:-1])
-        success = send_result_to_requester(results, ip_port_requester)
-        if success == True:
-                return 0
-        elif success == False:
-                return 1
-
+		results = assign_work_and_listen(WORKERS[0], "".join(res for res in results), reducer_task)
+        results = "".join(results)[:-1]
+	print "\tResult = {}".format(results)
+        return results
+        
+        
 def get_map_results(map_task, arguments):
         global WORKERS
         pool = Pool(processes=len(WORKERS))
