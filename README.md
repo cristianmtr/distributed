@@ -29,8 +29,13 @@ cp build/lib*/module.so ./
 If you're having issues compiling, just use the extract_tasks_and_input() function defined in server.py instead of the module.my_extract()
 
 
-NOTES
+TODO
 =====
+- to read more papers on MR, HDFS;
+- each worker to store a shard of data;
+- master node to store index of what each worker has;
+- display information via HTTP;
+- allow for task execution via HTTP forms;
 
 
 
